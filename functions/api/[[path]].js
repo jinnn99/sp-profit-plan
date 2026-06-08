@@ -129,20 +129,32 @@ async function writeCachedQuote(env, symbol, payload, now) {
   ).bind(symbol, JSON.stringify(payload), now).run();
 }
 
-async function fetchYahooQuotes(symbols) {
-  if (!symbols.length) return {};
+function quoteHeaders() {
+  return {
+    "user-agent": "Mozilla/5.0",
+    "accept": "application/json",
+  };
+}
+
+function lastFinite(values) {
+  if (!Array.isArray(values)) return NaN;
+  for (let i = values.length - 1; i >= 0; i -= 1) {
+    const value = Number(values[i]);
+    if (Number.isFinite(value)) return value;
+  }
+  return NaN;
+}
+
+async function fetchYahooQuoteBatch(symbols) {
+  const out = {};
   const url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
     + encodeURIComponent(symbols.join(","));
   const response = await fetch(url, {
-    headers: {
-      "user-agent": "Mozilla/5.0",
-      "accept": "application/json",
-    },
+    headers: quoteHeaders(),
   });
-  if (!response.ok) throw new Error(`quote_fetch_${response.status}`);
+  if (!response.ok) return out;
   const data = await response.json();
   const results = data?.quoteResponse?.result || [];
-  const out = {};
   for (const item of results) {
     const symbol = normalizeTicker(item.symbol);
     const price = Number(
@@ -156,6 +168,49 @@ async function fetchYahooQuotes(symbols) {
       currency: item.currency || "USD",
       source: "yahoo",
     };
+  }
+  return out;
+}
+
+async function fetchYahooChartQuote(symbol) {
+  const url = "https://query1.finance.yahoo.com/v8/finance/chart/"
+    + encodeURIComponent(symbol)
+    + "?range=1d&interval=1m";
+  const response = await fetch(url, {
+    headers: {
+      ...quoteHeaders(),
+    },
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  const item = data?.chart?.result?.[0];
+  const meta = item?.meta || {};
+  const closes = item?.indicators?.quote?.[0]?.close || [];
+  const price = Number(meta.regularMarketPrice ?? meta.postMarketPrice ?? meta.preMarketPrice);
+  const fallbackPrice = lastFinite(closes);
+  const resolvedPrice = Number.isFinite(price) ? price : fallbackPrice;
+  if (!Number.isFinite(resolvedPrice)) return null;
+  return {
+    ticker: normalizeTicker(meta.symbol || symbol),
+    name: meta.shortName || meta.longName || "",
+    price: resolvedPrice,
+    currency: meta.currency || "USD",
+    source: "yahoo-chart",
+  };
+}
+
+async function fetchYahooQuotes(symbols) {
+  if (!symbols.length) return {};
+  const out = await fetchYahooQuoteBatch(symbols);
+  const missing = symbols.filter((symbol) => !out[symbol]);
+  if (missing.length) {
+    const chartQuotes = await Promise.all(missing.map((symbol) => (
+      fetchYahooChartQuote(symbol).catch(() => null)
+    )));
+    for (const item of chartQuotes) {
+      if (!item?.ticker) continue;
+      out[item.ticker] = item;
+    }
   }
   return out;
 }
@@ -239,4 +294,3 @@ export async function onRequest(context) {
 
   return json({ error: "not_found" }, 404);
 }
-
