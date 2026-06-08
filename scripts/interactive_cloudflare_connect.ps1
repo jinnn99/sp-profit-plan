@@ -1,11 +1,17 @@
 param(
-    [string]$ProjectName = $(if ($env:CF_PAGES_PROJECT_NAME) { $env:CF_PAGES_PROJECT_NAME } else { "sweetproduct" }),
-    [string]$GhExe = "C:\Users\jin\Desktop\주식관련AI\tools\bin\gh.exe"
+    [string]$ProjectName = $(if ($env:CF_PAGES_PROJECT_NAME) { $env:CF_PAGES_PROJECT_NAME } else { "sweetproduct" })
 )
 
 $ErrorActionPreference = "Stop"
 
-Set-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
+$repoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location -LiteralPath $repoRoot
+
+$GhExe = Join-Path $repoRoot "tools\bin\gh.exe"
+if (-not (Test-Path -LiteralPath $GhExe)) {
+    throw "GitHub CLI was not found at tools\bin\gh.exe"
+}
+$GhExe = (Resolve-Path -LiteralPath $GhExe).Path
 
 Write-Host ""
 Write-Host "Cloudflare + GitHub 연결을 시작합니다."
