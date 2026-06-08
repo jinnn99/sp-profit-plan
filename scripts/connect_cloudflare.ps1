@@ -28,9 +28,10 @@ function Invoke-Cloudflare {
 
     $uri = "https://api.cloudflare.com/client/v4$Path"
     $params = @{
-        Method  = $Method
-        Uri     = $uri
-        Headers = $Headers
+        Method     = $Method
+        Uri        = $uri
+        Headers    = $Headers
+        TimeoutSec = 60
     }
     if ($null -ne $Body) {
         $params.Body = ($Body | ConvertTo-Json -Depth 20)
@@ -66,9 +67,30 @@ if (-not $databaseId) {
 
 Write-Host "Applying D1 migration to '$DatabaseName'..."
 $sql = Get-Content -LiteralPath $MigrationPath -Raw -Encoding UTF8
-Invoke-Cloudflare -Method "POST" -Path "/accounts/$AccountId/d1/database/$databaseId/query" -Body @{
-    sql = $sql
-} | Out-Null
+$statements = [regex]::Split($sql, ";\s*[\r\n]+") |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ }
+
+foreach ($statement in $statements) {
+    $statementSql = if ($statement.EndsWith(";")) { $statement } else { "$statement;" }
+    Write-Host "  - running SQL statement..."
+    $attempt = 0
+    while ($true) {
+        $attempt += 1
+        try {
+            Invoke-Cloudflare -Method "POST" -Path "/accounts/$AccountId/d1/database/$databaseId/query" -Body @{
+                sql = $statementSql
+            } | Out-Null
+            break
+        } catch {
+            if ($attempt -ge 3) {
+                throw
+            }
+            Write-Host "    retrying after Cloudflare D1 response delay..."
+            Start-Sleep -Seconds 5
+        }
+    }
+}
 
 Write-Host "Checking Cloudflare Pages project '$ProjectName'..."
 $project = $null
