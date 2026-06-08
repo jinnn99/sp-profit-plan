@@ -2,6 +2,19 @@ name: Build and deploy PWA
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/cloudflare-pages.yml"
+      - "functions/**"
+      - "migrations/**"
+      - "stock_ai/**"
+      - "tests/**"
+      - "export_mobile_app.py"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "requirements.txt"
   schedule:
     # KST 09:00, 13:00, 17:00, 21:00. Keep this modest to stay within free minutes.
     - cron: "0 0,4,8,12 * * *"
@@ -11,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      CF_PROJECT: ${{ vars.CF_PAGES_PROJECT_NAME || 'sweetproduct' }}
+      CF_PROJECT: sweetproduct
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
