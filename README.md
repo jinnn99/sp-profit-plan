@@ -112,10 +112,11 @@ GitHub Pages 같은 HTTPS 정적 호스팅에 올리면 휴대폰에서 홈 화�
 필요 설정:
 
 1. Cloudflare에서 무료 D1 database를 만들고 `migrations/0001_holdings.sql`을 적용한다.
-2. Pages 프로젝트에 D1 binding 이름을 `DB`로 연결한다.
-3. GitHub repository secrets에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`를 넣는다.
-4. 필요하면 repository variable `CF_PAGES_PROJECT_NAME`에 Pages 프로젝트명을 넣는다. 없으면 `sweetproduct`를 쓴다.
-5. `.github/workflows/cloudflare-pages.yml`이 예약 실행과 수동 실행을 담당한다.
+2. GitHub repository secrets에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+   `CLOUDFLARE_D1_DATABASE_ID`를 넣는다.
+3. 필요하면 repository variable `CF_PAGES_PROJECT_NAME`에 Pages 프로젝트명을 넣는다. 없으면 `sweetproduct`를 쓴다.
+4. `.github/workflows/cloudflare-pages.yml`이 예약 실행과 수동 실행을 담당한다.
+   워크플로는 배포 직전에 D1 binding 이름 `DB`가 포함된 `wrangler.toml`을 임시 생성한다.
 
 동기화 코드는 로그인 없이 모바일과 PC의 보유 목록을 연결하기 위한 키다. 한 기기에서 `코드 만들기`를
 누르고 다른 기기에서 같은 코드를 입력하면 같은 보유 목록을 불러온다.

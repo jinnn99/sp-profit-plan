@@ -110,7 +110,9 @@ _UX_ORDER = ["balanced", "momentum", "dividend"]
 
 1. `python export_mobile_app.py`로 `mobile_app/` 최신화.
 2. 현재 권장 배포는 Cloudflare Pages: `.github/workflows/cloudflare-pages.yml`이 `mobile_app/`를 배포.
-3. Cloudflare Pages 프로젝트에는 `functions/api/[[path]].js`와 D1 binding `DB`를 연결해야 동기화 코드/가격 API가 동작.
+3. GitHub secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`가 필요하다.
+   워크플로가 배포 직전에 D1 binding `DB`가 포함된 `wrangler.toml`을 임시 생성한다.
+   Cloudflare dashboard에서 직접 binding을 붙여도 되지만, secret 기반 설정을 우선 유지.
 4. Netlify 수동 배포도 가능하지만, 그 경우 Cloudflare API가 같은 origin에 없으면 동기화 기능은 별도 Worker 라우팅이 필요하다.
 
 ## 9. 사용자 요청으로 "제거된" 것들 (되살리지 말 것)

@@ -14,6 +14,7 @@ jobs:
       CF_PROJECT: ${{ vars.CF_PAGES_PROJECT_NAME || 'sweetproduct' }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,7 +37,25 @@ jobs:
       - name: Export mobile app
         run: python export_mobile_app.py
 
-      - name: Deploy to Cloudflare Pages
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
-        run: npx wrangler pages deploy mobile_app --project-name "$CF_PROJECT"
+      - name: Write Cloudflare Pages config
+        if: ${{ env.CLOUDFLARE_D1_DATABASE_ID != '' }}
+        shell: bash
+        run: |
+          cat > wrangler.toml <<EOF
+          name = "${CF_PROJECT}"
+          compatibility_date = "2026-06-09"
+          pages_build_output_dir = "mobile_app"
 
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "sp-profit-plan-holdings"
+          database_id = "${CLOUDFLARE_D1_DATABASE_ID}"
+          migrations_dir = "migrations"
+
+          [vars]
+          QUOTE_TTL_SECONDS = "300"
+          EOF
+
+      - name: Deploy to Cloudflare Pages
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' && env.CLOUDFLARE_D1_DATABASE_ID != '' }}
+        run: npx wrangler pages deploy mobile_app --project-name "$CF_PROJECT"
