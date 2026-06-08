@@ -1,5 +1,5 @@
 name = "sp-profit-plan"
-compatibility_date = "2026-06-09"
+compatibility_date = "2025-01-01"
 pages_build_output_dir = "mobile_app"
 
 # Copy this file to wrangler.toml only after creating the free D1 database.
@@ -13,4 +13,3 @@ migrations_dir = "migrations"
 [vars]
 # Quote API responses are cached to stay inside free limits.
 QUOTE_TTL_SECONDS = "300"
-

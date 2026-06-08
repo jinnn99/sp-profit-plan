@@ -56,7 +56,7 @@ jobs:
         run: |
           cat > wrangler.toml <<EOF
           name = "${CF_PROJECT}"
-          compatibility_date = "2026-06-09"
+          compatibility_date = "2025-01-01"
           pages_build_output_dir = "mobile_app"
 
           [[d1_databases]]
