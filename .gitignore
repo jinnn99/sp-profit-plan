@@ -1,0 +1,19 @@
+# 비밀 키
+.env
+
+# 파이썬
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# 생성물 (캐시 데이터·리포트)
+data_cache/
+reports/
+mobile_app/
+S&P_수익&플랜.html
+S&P_수익&플랜_mobile_app.zip
+*.sqlite
+*.db
+*.parquet

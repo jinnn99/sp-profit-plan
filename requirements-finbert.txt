@@ -1,0 +1,6 @@
+# FinBERT 옵션 의존성
+# 저사양 PC에서는 메모리 사용량이 클 수 있으므로 필요할 때만 설치하세요.
+
+-r requirements.txt
+torch>=2.2
+transformers>=4.40

@@ -1,0 +1,22 @@
+# 미국 주식 종합분석 추천 엔진 — 의존성 (전부 무료, 비용 0원)
+# 지표·백테스트 엔진은 순수 pandas 직접 구현 (pandas-ta / backtesting.py 미사용)
+
+# --- 데이터 ---
+yfinance>=0.2.40        # 미국주식 가격(OHLCV)·뉴스 무료 수집
+requests>=2.31          # SEC EDGAR API 호출
+beautifulsoup4>=4.12    # S&P500 구성종목 표 파싱(보조)
+lxml>=5.0               # pandas.read_html / bs4 파서
+
+# --- 분석 ---
+pandas>=2.0
+numpy>=1.26
+
+# --- 리포트 / CLI / 설정 ---
+plotly>=5.20            # 인터랙티브 차트 → 단일 HTML 리포트
+typer>=0.12             # CLI
+pydantic-settings>=2.0  # .env 설정
+python-dotenv>=1.0
+streamlit>=1.35         # 대시보드(app.py)
+
+# --- 개발/테스트 ---
+pytest>=8.0

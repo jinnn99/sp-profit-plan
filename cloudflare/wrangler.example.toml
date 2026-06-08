@@ -1,0 +1,16 @@
+name = "sp-profit-plan"
+compatibility_date = "2026-06-09"
+pages_build_output_dir = "mobile_app"
+
+# Copy this file to wrangler.toml only after creating the free D1 database.
+# Keep the binding name as DB because functions/api/[[path]].js expects env.DB.
+[[d1_databases]]
+binding = "DB"
+database_name = "sp-profit-plan-holdings"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+# Quote API responses are cached to stay inside free limits.
+QUOTE_TTL_SECONDS = "300"
+
