@@ -36,6 +36,10 @@ python export_mobile_app.py
    워크플로는 배포 직전에 D1 바인딩이 들어간 `wrangler.toml`을 임시 생성한다.
 7. 배포 주소를 휴대폰에서 열고 Chrome 또는 Safari 메뉴에서 `홈 화면에 추가`를 누른다.
 
+Cloudflare API token과 account id가 준비되어 있다면 `scripts/connect_cloudflare.ps1`로
+D1 생성, 마이그레이션 적용, Pages 프로젝트 생성을 한 번에 처리할 수 있다. 이 스크립트는 토큰을
+파일에 저장하지 않고, 결과 요약과 D1 database id만 `cloudflare-connection.json`에 기록한다.
+
 ## 3. 정적 미리보기: Netlify Drop / GitHub Pages
 
 Netlify Drop이나 GitHub Pages도 정적 PWA 확인용으로는 사용할 수 있다. 핵심은 `mobile_app`
