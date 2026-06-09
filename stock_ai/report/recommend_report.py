@@ -103,7 +103,16 @@ _STYLE = """
   .refresh-btn:disabled{ opacity:.6; cursor:default; }
   .upd{ font-size:12px; color:var(--mute); margin-left:4px; }
   .title-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
-  .title-row .refresh-btn{ flex:none; margin-top:10px; }
+  .hero-actions{ display:flex; align-items:center; gap:6px; flex:none; margin-top:10px; }
+  .info-btn{ width:30px; height:30px; border-radius:50%; border:1px solid var(--line);
+    background:var(--card); color:var(--mute); font-size:14px; line-height:1; cursor:pointer;
+    -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  .info-btn:hover{ color:var(--clay); border-color:var(--clay-soft); }
+  .info-pop{ margin:12px 0 0; padding:10px 14px; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; font-size:12.5px; color:var(--body); line-height:1.65; max-width:560px; }
+  .info-pop b{ color:var(--ink); font-weight:700; }
+  /* 모바일 길게 누름 시 OS 선택/복사 메뉴가 뜨지 않도록 */
+  .refresh-btn, .info-btn, .tab, .style-pill, .step, .mini-link{ -webkit-touch-callout:none; }
 
   .section{ margin-top:64px; }
   .section > .eyebrow{ margin-bottom:14px; }
@@ -338,7 +347,10 @@ _STYLE = """
     .hero .lead{ display:none; }
     .title-row{ align-items:center; gap:10px; }
     .hero h1{ font-size:1.3rem; line-height:1.16; margin:0; flex:1; }
+    .hero-actions{ margin-top:0; }
     .title-row .refresh-btn{ margin-top:0; font-size:12px; padding:6px 12px; }
+    .info-btn{ width:28px; height:28px; font-size:13px; }
+    .info-pop{ max-width:none; }
     .controls{ margin-top:10px; flex-wrap:nowrap; gap:8px; }
     .ctl-label{ flex:none; }
     .style-toggle{ flex:1; justify-content:space-between; padding:3px; }
@@ -655,6 +667,19 @@ _PAGER_JS = """
     wt.setAttribute('aria-expanded', willOpen?'true':'false');
     wt.classList.toggle('open', willOpen);
   }); }
+  // 갱신·시장시간 안내: ⓘ 탭하면 펼침(모바일에서 title 툴팁이 안 뜨므로). 바깥 탭하면 닫힘.
+  var ib=document.getElementById('info-btn'), ip=document.getElementById('info-pop');
+  if(ib && ip){
+    ib.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open=ip.hasAttribute('hidden');
+      if(open) ip.removeAttribute('hidden'); else ip.setAttribute('hidden','');
+      ib.setAttribute('aria-expanded', open?'true':'false');
+    });
+    document.addEventListener('click', function(){
+      if(!ip.hasAttribute('hidden')){ ip.setAttribute('hidden',''); ib.setAttribute('aria-expanded','false'); }
+    });
+  }
 })();
 """
 
@@ -1096,6 +1121,10 @@ def build_recommend_report(
     refresh_aria = (
         f"순위 갱신 매일 09시 13시 17시 21시 KST, 미국 증시 오픈 매일 {market_kst} KST"
     )
+    info_html = (
+        f"<b>순위 갱신</b> · 매일 09·13·17·21시(KST)<br>"
+        f"<b>시장 오픈</b> · 매일 {market_kst}(KST)"
+    )
     if out_path is None:
         out_path = DEFAULT_RECOMMEND_REPORT
     out_path = Path(out_path)
@@ -1197,8 +1226,12 @@ def build_recommend_report(
     <p class="eyebrow">S&amp;P 500 · 종합분석 스크리너</p>
     <div class="title-row">
       <h1>미국 주식 종합분석<br><em>추천 리포트</em></h1>
-      <button class="refresh-btn" id="refresh-btn" type="button" title="{refresh_title}" aria-label="{refresh_aria}">↻ 갱신</button>
+      <div class="hero-actions">
+        <button class="refresh-btn" id="refresh-btn" type="button" title="{refresh_title}" aria-label="{refresh_aria}">↻ 갱신</button>
+        <button class="info-btn" id="info-btn" type="button" aria-label="갱신·시장 시간 안내" aria-expanded="false">ⓘ</button>
+      </div>
     </div>
+    <div class="info-pop" id="info-pop" hidden>{info_html}</div>
     <p class="lead">S&amp;P 500을 가치·품질·성장·추세·심리 다섯 축으로 점수화해,<br>무엇을 어떤 규칙으로 사고팔지 근거와 함께 정리한 참고 자료입니다.</p>
     <div class="controls">
       <span class="ctl-label">투자성향</span>
