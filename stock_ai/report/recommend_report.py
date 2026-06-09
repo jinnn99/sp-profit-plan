@@ -1184,7 +1184,7 @@ def build_recommend_report(
     <p class="eyebrow">S&amp;P 500 · 종합분석 스크리너</p>
     <div class="title-row">
       <h1>미국 주식 종합분석<br><em>추천 리포트</em></h1>
-      <button class="refresh-btn" id="refresh-btn" type="button">↻ 갱신</button>
+      <button class="refresh-btn" id="refresh-btn" type="button" title="순위 갱신 · 매일 09·13·17·21시(KST)" aria-label="순위 갱신 · 매일 09시 13시 17시 21시 KST">↻ 갱신</button>
     </div>
     <p class="lead">S&amp;P 500을 가치·품질·성장·추세·심리 다섯 축으로 점수화해,<br>무엇을 어떤 규칙으로 사고팔지 근거와 함께 정리한 참고 자료입니다.</p>
     <div class="controls">
