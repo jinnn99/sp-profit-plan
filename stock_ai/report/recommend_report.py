@@ -1083,6 +1083,19 @@ def build_recommend_report(
 
     today = dt.date.today().strftime("%Y%m%d")
     gen_time = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 미국 증시 정규장(ET 09:30~16:00)의 KST 환산 — 서머타임(DST)에 따라 달라진다.
+    try:
+        from zoneinfo import ZoneInfo
+        _us_dst = bool(dt.datetime.now(ZoneInfo("America/New_York")).dst())
+    except Exception:
+        _us_dst = 3 < dt.date.today().month < 11  # 폴백: 4~10월을 DST로 추정
+    market_kst = "22:30~05:00" if _us_dst else "23:30~06:00"
+    refresh_title = (
+        f"순위 갱신 · 매일 09·13·17·21시(KST)&#10;시장 오픈 · 매일 {market_kst}(KST)"
+    )
+    refresh_aria = (
+        f"순위 갱신 매일 09시 13시 17시 21시 KST, 미국 증시 오픈 매일 {market_kst} KST"
+    )
     if out_path is None:
         out_path = DEFAULT_RECOMMEND_REPORT
     out_path = Path(out_path)
@@ -1184,7 +1197,7 @@ def build_recommend_report(
     <p class="eyebrow">S&amp;P 500 · 종합분석 스크리너</p>
     <div class="title-row">
       <h1>미국 주식 종합분석<br><em>추천 리포트</em></h1>
-      <button class="refresh-btn" id="refresh-btn" type="button" title="순위 갱신 · 매일 09·13·17·21시(KST)" aria-label="순위 갱신 · 매일 09시 13시 17시 21시 KST">↻ 갱신</button>
+      <button class="refresh-btn" id="refresh-btn" type="button" title="{refresh_title}" aria-label="{refresh_aria}">↻ 갱신</button>
     </div>
     <p class="lead">S&amp;P 500을 가치·품질·성장·추세·심리 다섯 축으로 점수화해,<br>무엇을 어떤 규칙으로 사고팔지 근거와 함께 정리한 참고 자료입니다.</p>
     <div class="controls">
