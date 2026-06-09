@@ -102,6 +102,8 @@ _STYLE = """
   .refresh-btn:hover{ background:#f0ece2; }
   .refresh-btn:disabled{ opacity:.6; cursor:default; }
   .upd{ font-size:12px; color:var(--mute); margin-left:4px; }
+  .title-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+  .title-row .refresh-btn{ flex:none; margin-top:10px; }
 
   .section{ margin-top:64px; }
   .section > .eyebrow{ margin-bottom:14px; }
@@ -275,13 +277,19 @@ _STYLE = """
   .mini-link{ margin-left:auto; background:none; border:none; color:var(--clay);
     font:inherit; font-size:.82rem; cursor:pointer; padding:2px 4px; border-radius:6px; }
   .mini-link:hover{ text-decoration:underline; }
-  .weight-row{ display:grid; grid-template-columns:46px 1fr 34px; align-items:center;
-    gap:10px; padding:4px 0; }
+  .weight-row{ display:grid; grid-template-columns:44px 1fr 26px 24px; align-items:center;
+    gap:9px; padding:4px 0; }
   .weight-row .wk{ font-size:.86rem; color:var(--body); }
   .weight-row .wv{ font-size:.82rem; color:var(--mute); text-align:right;
     font-variant-numeric:tabular-nums; }
+  .stepper{ display:flex; flex-direction:column; gap:2px; }
+  .step{ width:24px; height:15px; padding:0; line-height:1; display:flex; align-items:center;
+    justify-content:center; border:1px solid var(--line); background:var(--card); color:var(--mute);
+    border-radius:5px; cursor:pointer; font-size:8px; }
+  .step:hover{ color:var(--clay); border-color:var(--clay-soft); }
+  .step:active{ background:#f0ece2; }
   .weight-row input[type=range]{ -webkit-appearance:none; appearance:none; width:100%;
-    height:4px; border-radius:4px; background:var(--line); outline:none; }
+    height:4px; border-radius:4px; background:var(--line); outline:none; touch-action:pan-y; }
   .weight-row input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none;
     width:16px; height:16px; border-radius:50%; background:var(--clay); cursor:pointer;
     border:2px solid var(--card); box-shadow:0 1px 3px rgba(0,0,0,.2); }
@@ -311,11 +319,19 @@ _STYLE = """
   @media (max-width:720px){
     html, body{ overflow:hidden; }
     .wrap{ display:flex; flex-direction:column; height:100dvh; max-width:none; padding:0; }
-    .hero{ padding:14px 16px 8px; }
+    .hero{ padding:12px 14px 6px; flex:0 0 auto; }
+    .hero .eyebrow{ display:none; }
     .hero .lead{ display:none; }
-    .hero h1{ font-size:1.5rem; margin:2px 0 8px; }
-    .controls{ margin-top:8px; }
-    .weights{ margin:10px 0 0; max-width:none; }
+    .title-row{ align-items:center; gap:10px; }
+    .hero h1{ font-size:1.3rem; line-height:1.16; margin:0; flex:1; }
+    .title-row .refresh-btn{ margin-top:0; font-size:12px; padding:6px 12px; }
+    .controls{ margin-top:10px; flex-wrap:nowrap; gap:8px; }
+    .ctl-label{ flex:none; }
+    .style-toggle{ flex:1; justify-content:space-between; padding:3px; }
+    .style-pill{ flex:1; text-align:center; padding:6px 6px; font-size:12px; white-space:nowrap; }
+    .upd{ display:none; }
+    .weights{ margin:8px 0 0; max-width:none; }
+    .weight-body{ max-height:40vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
     .tabbar{ display:flex; gap:4px; padding:6px 10px; background:var(--paper);
       border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; flex:0 0 auto; }
     .tab{ flex:1; padding:9px 6px; border:none; background:none; font:inherit;
@@ -540,11 +556,22 @@ _RANK_JS = """
     markPills(); setLabel(); updateSum();
   }
 
-  sliders.forEach(function(sl){ sl.addEventListener('input', function(){
-    var a=sl.getAttribute('data-axis'); weights[a]=parseInt(sl.value,10)||0;
-    var out=document.querySelector('[data-axis-val="'+a+'"]'); if(out) out.textContent=weights[a];
+  function applyAxis(a, val){
+    val=Math.max(0, Math.min(100, val|0));
+    weights[a]=val;
+    var sl=document.querySelector('input[data-axis="'+a+'"]'); if(sl && (sl.value|0)!==val) sl.value=val;
+    var out=document.querySelector('[data-axis-val="'+a+'"]'); if(out) out.textContent=val;
     markPills(); setLabel(); updateSum(); saveWeights(); scheduleRender();
+  }
+  sliders.forEach(function(sl){ sl.addEventListener('input', function(){
+    applyAxis(sl.getAttribute('data-axis'), parseInt(sl.value,10)||0);
   }); });
+  Array.prototype.slice.call(document.querySelectorAll('.step')).forEach(function(b){
+    b.addEventListener('click', function(){
+      var a=b.getAttribute('data-axis'); var step=parseInt(b.getAttribute('data-step'),10)||0;
+      applyAxis(a, (weights[a]||0)+step);
+    });
+  });
   pills.forEach(function(p){ p.addEventListener('click', function(){
     var st=p.getAttribute('data-style'), pr=PRESETS[st]; if(!pr) return;
     AXES.forEach(function(a){ weights[a]=Math.round((pr[a]||0)*100); });
@@ -1078,10 +1105,14 @@ def build_recommend_report(
     # 가중치 슬라이더 초기값(기본 성향 프리셋 → 0~100). 합 무관(JS가 정규화).
     _default_w = FACTOR_WEIGHT_PRESETS.get(default_style) or FACTOR_WEIGHT_PRESETS["balanced"]
     weight_rows = "".join(
-        f'<label class="weight-row"><span class="wk">{FACTOR_LABELS_KO[a]}</span>'
+        f'<div class="weight-row"><span class="wk">{FACTOR_LABELS_KO[a]}</span>'
         f'<input type="range" min="0" max="100" step="1" data-axis="{a}" '
         f'value="{round(_default_w.get(a, 0) * 100)}" aria-label="{FACTOR_LABELS_KO[a]} 가중치">'
-        f'<span class="wv" data-axis-val="{a}">{round(_default_w.get(a, 0) * 100)}</span></label>'
+        f'<span class="wv" data-axis-val="{a}">{round(_default_w.get(a, 0) * 100)}</span>'
+        f'<span class="stepper">'
+        f'<button type="button" class="step" data-axis="{a}" data-step="1" aria-label="{FACTOR_LABELS_KO[a]} 1 증가">▲</button>'
+        f'<button type="button" class="step" data-axis="{a}" data-step="-1" aria-label="{FACTOR_LABELS_KO[a]} 1 감소">▼</button>'
+        f'</span></div>'
         for a in _AXES
     )
     weights_panel = (
@@ -1117,12 +1148,14 @@ def build_recommend_report(
 
   <header class="hero">
     <p class="eyebrow">S&amp;P 500 · 종합분석 스크리너</p>
-    <h1>미국 주식 종합분석<br><em>추천 리포트</em></h1>
+    <div class="title-row">
+      <h1>미국 주식 종합분석<br><em>추천 리포트</em></h1>
+      <button class="refresh-btn" id="refresh-btn" type="button">↻ 갱신</button>
+    </div>
     <p class="lead">S&amp;P 500을 가치·품질·성장·추세·심리 다섯 축으로 점수화해,<br>무엇을 어떤 규칙으로 사고팔지 근거와 함께 정리한 참고 자료입니다.</p>
     <div class="controls">
       <span class="ctl-label">투자성향</span>
       <div class="style-toggle" role="group" aria-label="투자성향">{pills}</div>
-      <button class="refresh-btn" id="refresh-btn" type="button">↻ 갱신</button>
       <span class="upd">마지막 갱신 {gen_time}</span>
     </div>
     {weights_panel}
