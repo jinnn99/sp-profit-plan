@@ -78,6 +78,10 @@ streamlit run app.py
 
 영구 배포 주소:
 
+https://sweetproduct.pages.dev
+
+레거시/정적 미리보기 주소:
+
 https://sweetproduct.netlify.app
 
 ```powershell
@@ -107,15 +111,16 @@ GitHub Pages 같은 HTTPS 정적 호스팅에 올리면 휴대폰에서 홈 화�
 - Cloudflare Pages: `mobile_app/` 정적 PWA 배포.
 - Cloudflare Pages Functions/Workers: `/api/holdings`, `/api/sync-code`, `/api/quotes` 제공.
 - Cloudflare D1: 동기화 코드별 보유 종목 저장.
-- 가격 조회: 무료/best-effort quote endpoint를 5분 캐시로 사용. 유료 시세 API는 기본 사용하지 않는다.
+- 가격 조회: 무료/best-effort Yahoo chart fallback을 5분 캐시로 사용. 유료 시세 API는 기본 사용하지 않는다.
 
-필요 설정:
+현재 설정:
 
-1. Cloudflare에서 무료 D1 database를 만들고 `migrations/0001_holdings.sql`을 적용한다.
-2. GitHub repository secrets에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
-   `CLOUDFLARE_D1_DATABASE_ID`를 넣는다.
-3. 필요하면 repository variable `CF_PAGES_PROJECT_NAME`에 Pages 프로젝트명을 넣는다. 없으면 `sweetproduct`를 쓴다.
-4. `.github/workflows/cloudflare-pages.yml`이 예약 실행과 수동 실행을 담당한다.
+1. GitHub 저장소: `https://github.com/jinnn99/sp-profit-plan`
+2. Cloudflare Pages 프로젝트: `sweetproduct`
+3. GitHub repository secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+   `CLOUDFLARE_D1_DATABASE_ID`
+4. GitHub repository variable: `CF_PAGES_PROJECT_NAME=sweetproduct`
+5. `.github/workflows/cloudflare-pages.yml`이 예약 실행과 수동 실행을 담당한다.
    워크플로는 배포 직전에 D1 binding 이름 `DB`가 포함된 `wrangler.toml`을 임시 생성한다.
 
 동기화 코드는 로그인 없이 모바일과 PC의 보유 목록을 연결하기 위한 키다. 한 기기에서 `코드 만들기`를
@@ -151,8 +156,8 @@ pytest -q
 
 ## 로드맵
 
-- Phase 1 (현재): 단일 종목 기술적 전략 백테스트 + HTML 리포트 ✅
+- Phase 1: 단일 종목 기술적 전략 백테스트 + HTML 리포트 ✅
 - Phase 2: 기본적 지표(PER·PBR 등) + 멀티팩터 추천 ✅
-- Phase 3: 무료 Cloudflare 동기화 코드 + 보유 종목 평가
+- Phase 3: 무료 Cloudflare 동기화 코드 + 보유 종목 평가 ✅
 - Phase 4: 뉴스·공시 감성 고도화(FinBERT/외부 API 선택)
 - Phase 5: 워크포워드/아웃오브샘플 검증, 파라미터 최적화

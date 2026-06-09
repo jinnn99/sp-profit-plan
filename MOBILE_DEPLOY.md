@@ -5,6 +5,10 @@ HTTPS 주소로 열면 휴대폰 홈 화면에 추가해서 앱처럼 사용할 
 
 현재 영구 배포 주소:
 
+https://sweetproduct.pages.dev
+
+레거시/정적 미리보기 주소:
+
 https://sweetproduct.netlify.app
 
 무료 운영의 권장 목표 구조는 GitHub Actions + Cloudflare Pages/Workers + D1 동기화 코드다.
@@ -26,17 +30,16 @@ python export_mobile_app.py
 
 동기화 코드와 준실시간 가격 API까지 쓰려면 Cloudflare Pages Functions와 D1 binding이 필요하다.
 
-1. Cloudflare Pages 프로젝트를 만든다.
-2. 무료 D1 database를 만들고 `migrations/0001_holdings.sql`을 적용한다.
-3. Pages 프로젝트에 D1 binding 이름을 `DB`로 연결한다.
-4. GitHub secrets에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
-   `CLOUDFLARE_D1_DATABASE_ID`를 설정한다.
-5. 필요하면 GitHub repository variable `CF_PAGES_PROJECT_NAME`에 Pages 프로젝트명을 넣는다.
-6. `.github/workflows/cloudflare-pages.yml`을 수동 실행하거나 예약 실행을 기다린다.
+1. Cloudflare Pages 프로젝트 `sweetproduct`가 연결되어 있다.
+2. 무료 D1 database `sp-profit-plan-holdings`가 연결되어 있다.
+3. GitHub secrets에 `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+   `CLOUDFLARE_D1_DATABASE_ID`가 설정되어 있다.
+4. GitHub repository variable `CF_PAGES_PROJECT_NAME=sweetproduct`가 설정되어 있다.
+5. `.github/workflows/cloudflare-pages.yml`을 수동 실행하거나 예약 실행을 기다린다.
    워크플로는 배포 직전에 D1 바인딩이 들어간 `wrangler.toml`을 임시 생성한다.
-7. 배포 주소를 휴대폰에서 열고 Chrome 또는 Safari 메뉴에서 `홈 화면에 추가`를 누른다.
+6. 배포 주소를 휴대폰에서 열고 Chrome 또는 Safari 메뉴에서 `홈 화면에 추가`를 누른다.
 
-Cloudflare API token과 account id가 준비되어 있다면 `scripts/connect_cloudflare.ps1`로
+새 계정에서 다시 연결해야 한다면 Cloudflare API token과 account id를 준비한 뒤 `scripts/connect_cloudflare.ps1`로
 D1 생성, 마이그레이션 적용, Pages 프로젝트 생성을 한 번에 처리할 수 있다. 이 스크립트는 토큰을
 파일에 저장하지 않고, 결과 요약과 D1 database id만 `cloudflare-connection.json`에 기록한다.
 
