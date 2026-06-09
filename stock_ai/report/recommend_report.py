@@ -305,6 +305,20 @@ _STYLE = """
     stroke-linejoin:round; }
   .radar text{ font-size:9px; fill:var(--mute); }
 
+  /* 조건주문 기준가 */
+  .levels{ margin:2px 0 12px; }
+  .levels h4{ font-family:var(--sans); font-size:12px; font-weight:700; color:var(--ink); margin:0 0 8px; }
+  .lvl-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .lvl{ background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:8px 10px; display:flex; flex-direction:column; gap:2px; }
+  .lvl span{ font-size:11px; color:var(--mute); }
+  .lvl b{ font-size:1.02rem; color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums; }
+  .lvl small{ font-size:10px; color:var(--mute); }
+  .lvl.buy{ border-color:var(--clay-soft); }
+  .lvl.buy b{ color:var(--clay); }
+  .lvl.stop b{ color:#b0523b; }
+  .lvl-note{ font-size:10px; color:var(--mute); margin:6px 0 0; }
+
   /* 가중치 패널 접기/펼치기 */
   .weights-toggle{ display:flex; align-items:center; gap:10px; width:100%;
     background:none; border:none; font:inherit; cursor:pointer; padding:0; color:var(--ink); }
@@ -509,12 +523,21 @@ _RANK_JS = """
       var why=(it.why||[]).map(function(w){return '<li>'+esc(w)+'</li>';}).join('')||'<li>—</li>';
       var risks=(it.risks||[]).map(function(w){return '<li>'+esc(w)+'</li>';}).join('')
         ||'<li>특이 리스크 메모 없음</li>';
+      var L=it.lvl, lvlHtml='';
+      if(L){
+        lvlHtml='<div class="levels"><h4>조건주문 기준가</h4><div class="lvl-row">'
+          +'<div class="lvl buy"><span>매수 고려가</span><b>'+fmtPrice(L.buy)+'</b><small>−'+L.d+'% 눌림·분할</small></div>'
+          +'<div class="lvl stop"><span>손절 기준가</span><b>'+fmtPrice(L.stop)+'</b><small>−20%</small></div>'
+          +(L.trend!=null?'<div class="lvl trend"><span>추세 이탈가</span><b>'+fmtPrice(L.trend)+'</b><small>200일선</small></div>':'')
+          +'</div><p class="lvl-note">규칙 기반 참고가 · 예측·매매 지시 아님</p></div>';
+      }
       return '<div class="card"><div class="card-head">'
         +'<span class="rank-ticker">'+esc(it.t)+'</span>'
         +'<span class="rank-name">'+indLine(it)+'</span>'
         +'<span class="composite">'+comp.toFixed(0)+'점</span></div>'
         +'<div class="card-meta">현재가 '+fmtPrice(it.p)+' · 신뢰도 <b>'+esc(confidence(cov,comp))+'</b></div>'
         +'<div class="radar-wrap">'+radar(it.sc||[])+'</div>'
+        +lvlHtml
         +'<div class="cols"><div><h4>왜 추천?</h4><ul>'+why+'</ul></div>'
         +'<div><h4>리스크</h4><ul>'+risks+'</ul></div></div></div>';
     }).join('');

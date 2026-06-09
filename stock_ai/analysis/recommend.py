@@ -260,6 +260,29 @@ def select_from_universe(
     return selected
 
 
+def _order_levels(price, above_200d, volatility) -> dict | None:
+    """조건주문용 '규칙 기반' 기준가(예측 아님, 손실제한 철학과 일치).
+
+    - buy:  분할매수 눌림목 = 현재가 − d%(변동성 비례, 3~10%로 제한)
+    - stop: 손절 = 현재가 −20%(공통 청산 규칙의 트레일링 −20% 환산)
+    - trend: 추세 이탈선 = 200일 이동평균(현재가/(1+above_200d))
+    """
+    if price is None or not pd.notna(price) or price <= 0:
+        return None
+    d = 0.05
+    if volatility is not None and pd.notna(volatility) and volatility > 0:
+        d = min(max(float(volatility) * 0.25, 0.03), 0.10)
+    trend = None
+    if above_200d is not None and pd.notna(above_200d) and (1 + above_200d) > 0:
+        trend = round(float(price) / (1 + float(above_200d)), 2)
+    return {
+        "buy": round(float(price) * (1 - d), 2),
+        "stop": round(float(price) * 0.80, 2),
+        "trend": trend,
+        "d": round(d * 100),
+    }
+
+
 def build_score_universe(score_df: pd.DataFrame, min_coverage: float = 0.4) -> list[dict]:
     """종합점수표 → 브라우저 슬라이더용 압축 종목 데이터.
 
@@ -292,5 +315,6 @@ def build_score_universe(score_df: pd.DataFrame, min_coverage: float = 0.4) -> l
             "sc": sc,
             "why": why,
             "risks": risks,
+            "lvl": _order_levels(price, row.get("above_200d"), row.get("volatility")),
         })
     return out
