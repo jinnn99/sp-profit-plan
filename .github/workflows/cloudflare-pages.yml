@@ -62,7 +62,7 @@ jobs:
         run: pytest -q
 
       - name: Build recommendation report
-        run: python -m stock_ai recommend --top 10 --limit 0 --no-sentiment
+        run: python -m stock_ai recommend --top 10 --limit 0
 
       - name: Export mobile app
         run: python export_mobile_app.py

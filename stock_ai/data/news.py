@@ -91,4 +91,7 @@ def get_headlines(ticker: str, limit: int = 15, max_age_hours: float = 24.0,
 
     cache.write_text(json.dumps({"ts": time.time(), "headlines": uniq}, ensure_ascii=False),
                      encoding="utf-8")
+    # 실제 네트워크 호출(캐시 미스)이 일어난 경우에만 짧게 쉰다 — 503종목 일괄 수집 시
+    # yfinance 뉴스 throttling 완화(캐시 적중 시에는 지연 없음).
+    time.sleep(0.12)
     return uniq
