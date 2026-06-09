@@ -127,6 +127,11 @@ def recommend_universe(
     price_map: dict[str, pd.Series] = {}
     n = len(tickers)
     from stock_ai.data.fundamentals import Fundamentals
+    # 베타(시장 민감도) 계산용 벤치마크(SPY) — 한 번만 받아 모든 종목에 재사용.
+    try:
+        benchmark_close = get_prices("SPY", start=start)["close"]
+    except Exception:
+        benchmark_close = None
     failed = []
     for i, t in enumerate(tickers, 1):
         if progress and (i == 1 or i % 10 == 0 or i == n):
@@ -154,7 +159,8 @@ def recommend_universe(
                     sent = None
 
             raws.append(build_factor_raw(t, fund, prices, sent,
-                                         sector=sectors.get(t, ""), name=names.get(t, "")))
+                                         sector=sectors.get(t, ""), name=names.get(t, ""),
+                                         benchmark=benchmark_close))
         except Exception as e:
             failed.append(t)
             print(f"  ! {t} 건너뜀: {str(e)[:80]}", flush=True)
