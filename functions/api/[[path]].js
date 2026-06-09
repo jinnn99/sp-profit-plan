@@ -145,33 +145,6 @@ function lastFinite(values) {
   return NaN;
 }
 
-async function fetchYahooQuoteBatch(symbols) {
-  const out = {};
-  const url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
-    + encodeURIComponent(symbols.join(","));
-  const response = await fetch(url, {
-    headers: quoteHeaders(),
-  });
-  if (!response.ok) return out;
-  const data = await response.json();
-  const results = data?.quoteResponse?.result || [];
-  for (const item of results) {
-    const symbol = normalizeTicker(item.symbol);
-    const price = Number(
-      item.regularMarketPrice ?? item.postMarketPrice ?? item.preMarketPrice
-    );
-    if (!symbol || !Number.isFinite(price)) continue;
-    out[symbol] = {
-      ticker: symbol,
-      name: item.shortName || item.longName || "",
-      price,
-      currency: item.currency || "USD",
-      source: "yahoo",
-    };
-  }
-  return out;
-}
-
 async function fetchYahooChartQuote(symbol) {
   const url = "https://query1.finance.yahoo.com/v8/finance/chart/"
     + encodeURIComponent(symbol)
@@ -199,18 +172,26 @@ async function fetchYahooChartQuote(symbol) {
   };
 }
 
+// 외부 호출을 chunk로 끊어 invocation당 subrequest(무료 플랜 외부 50) 여유를 둔다.
+async function mapInChunks(items, size, worker) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) {
+    const batch = items.slice(i, i + size);
+    out.push(...await Promise.all(batch.map(worker)));
+  }
+  return out;
+}
+
 async function fetchYahooQuotes(symbols) {
   if (!symbols.length) return {};
-  const out = await fetchYahooQuoteBatch(symbols);
-  const missing = symbols.filter((symbol) => !out[symbol]);
-  if (missing.length) {
-    const chartQuotes = await Promise.all(missing.map((symbol) => (
-      fetchYahooChartQuote(symbol).catch(() => null)
-    )));
-    for (const item of chartQuotes) {
-      if (!item?.ticker) continue;
-      out[item.ticker] = item;
-    }
+  // v7 quote 엔드포인트는 현재 사실상 항상 Unauthorized라 chart 경로를 1차로 쓴다.
+  const out = {};
+  const chartQuotes = await mapInChunks(symbols, 8, (symbol) => (
+    fetchYahooChartQuote(symbol).catch(() => null)
+  ));
+  for (const item of chartQuotes) {
+    if (!item?.ticker) continue;
+    out[item.ticker] = item;
   }
   return out;
 }
@@ -219,7 +200,7 @@ async function getQuotes(env, url) {
   const raw = url.searchParams.get("symbols") || "";
   const symbols = Array.from(new Set(
     raw.split(",").map(normalizeTicker).filter((s) => /^[A-Z0-9.-]{1,12}$/.test(s))
-  )).slice(0, 40);
+  )).slice(0, 20);
   const now = Date.now();
   const ttlSeconds = Number(env.QUOTE_TTL_SECONDS || 300);
   const ttlMs = Math.max(60, Math.min(ttlSeconds, 900)) * 1000;

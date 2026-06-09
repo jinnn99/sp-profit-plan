@@ -41,6 +41,23 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      # data_cache/ 를 주간 단위로 캐싱해 매 실행마다 SEC EDGAR/yfinance 전체를
+      # 다시 긁지 않도록 한다. 캐시 미스 시에도 코드 내 7일 TTL이 최신성을 보장한다.
+      # GitHub Actions 캐시 기본 한도(저장소당 10GB) 안에서만 쓴다. 한도 상향은
+      # 비용 위험이므로 사용자 승인 없이 설정하지 않는다.
+      - name: Compute weekly cache key
+        id: cachekey
+        shell: bash
+        run: echo "week=$(date -u +%Y-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache market/SEC data
+        uses: actions/cache@v4
+        with:
+          path: data_cache
+          key: data-cache-${{ steps.cachekey.outputs.week }}
+          restore-keys: |
+            data-cache-
+
       - name: Run tests
         run: pytest -q
 
@@ -71,4 +88,4 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' && env.CLOUDFLARE_D1_DATABASE_ID != '' }}
-        run: npx wrangler pages deploy mobile_app --project-name "$CF_PROJECT"
+        run: npx wrangler@4 pages deploy mobile_app --project-name "$CF_PROJECT"

@@ -108,7 +108,7 @@ def recommend_universe(
         (recommendations, score_df, portfolio_result, report_path)
     """
     from stock_ai.analysis.factors import build_factor_raw
-    from stock_ai.analysis.recommend import build_recommendations
+    from stock_ai.analysis.recommend import build_recommendations, build_score_universe
     from stock_ai.analysis.score import compute_scores
     from stock_ai.data.fundamentals import get_fundamentals
     from stock_ai.data.universe import get_sp500
@@ -176,6 +176,8 @@ def recommend_universe(
         if st == default_style:
             score_df = sdf
     recs = style_recs[default_style]
+    # 브라우저 가중치 슬라이더용 전 종목 데이터(서브점수는 가중치 무관이라 한 번만 만든다).
+    score_universe = build_score_universe(score_df) if score_df is not None else []
     holding_universe = []
     if score_df is not None and not score_df.empty:
         for ticker, row in score_df.iterrows():
@@ -209,5 +211,6 @@ def recommend_universe(
             portfolio_result=portfolio_result,
             universe_size=universe_size, analyzed=len(tickers),
             holding_universe=holding_universe,
+            score_universe=score_universe,
         )
     return recs, score_df, portfolio_result, report_path

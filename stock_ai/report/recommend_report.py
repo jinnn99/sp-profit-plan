@@ -20,7 +20,7 @@ import json
 from pathlib import Path
 
 from stock_ai.analysis.recommend import Recommendation
-from stock_ai.config import FACTOR_LABELS_KO, PROJECT_ROOT
+from stock_ai.config import FACTOR_LABELS_KO, FACTOR_WEIGHT_PRESETS, PROJECT_ROOT
 
 _AXES = ["value", "quality", "growth", "trend", "sentiment"]
 DEFAULT_RECOMMEND_REPORT = PROJECT_ROOT / "S&P_수익&플랜.html"
@@ -260,6 +260,75 @@ _STYLE = """
     .holding-table td:nth-child(6)::before{ content:"상태"; }
     .holding-table td:nth-child(7)::before{ content:""; }
   }
+
+  /* 가중치 슬라이더 패널 */
+  .weights{ margin:18px auto 0; padding:16px 18px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; max-width:560px; text-align:left; }
+  .weights-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .weights-head .ctl-label{ margin:0; }
+  .style-now{ font-size:.82rem; color:var(--mute); }
+  .weight-sum{ font-size:.82rem; color:var(--mute); font-variant-numeric:tabular-nums; }
+  .weight-sum.bad{ color:var(--clay); font-weight:600; }
+  .weight-warn{ text-align:center !important; color:var(--mute); padding:24px 12px !important; }
+  .weight-warn-card{ grid-column:1 / -1; text-align:center; color:var(--mute);
+    border:1px dashed var(--line); border-radius:12px; padding:26px 16px; background:var(--card); }
+  .mini-link{ margin-left:auto; background:none; border:none; color:var(--clay);
+    font:inherit; font-size:.82rem; cursor:pointer; padding:2px 4px; border-radius:6px; }
+  .mini-link:hover{ text-decoration:underline; }
+  .weight-row{ display:grid; grid-template-columns:46px 1fr 34px; align-items:center;
+    gap:10px; padding:4px 0; }
+  .weight-row .wk{ font-size:.86rem; color:var(--body); }
+  .weight-row .wv{ font-size:.82rem; color:var(--mute); text-align:right;
+    font-variant-numeric:tabular-nums; }
+  .weight-row input[type=range]{ -webkit-appearance:none; appearance:none; width:100%;
+    height:4px; border-radius:4px; background:var(--line); outline:none; }
+  .weight-row input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%; background:var(--clay); cursor:pointer;
+    border:2px solid var(--card); box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .weight-row input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
+    background:var(--clay); cursor:pointer; border:2px solid var(--card); }
+
+  /* 5축 레이더 차트 */
+  .radar-wrap{ display:flex; justify-content:center; margin:6px 0 12px; }
+  .radar{ width:100%; max-width:210px; height:auto; }
+  .radar-grid{ fill:none; stroke:var(--line); stroke-width:1; }
+  .radar-grid.mid{ opacity:.55; }
+  .radar-area{ fill:var(--clay); fill-opacity:.20; stroke:var(--clay); stroke-width:1.5;
+    stroke-linejoin:round; }
+  .radar text{ font-size:9px; fill:var(--mute); }
+
+  /* 가중치 패널 접기/펼치기 */
+  .weights-toggle{ display:flex; align-items:center; gap:10px; width:100%;
+    background:none; border:none; font:inherit; cursor:pointer; padding:0; color:var(--ink); }
+  .weights-toggle .ctl-label{ margin:0; }
+  .weights-toggle .caret{ margin-left:auto; color:var(--mute); transition:transform .15s ease; }
+  .weights-toggle.open .caret{ transform:rotate(180deg); }
+  .weight-body{ margin-top:12px; }
+  .weights-foot{ margin-top:8px; text-align:right; }
+
+  /* 모바일 페이저(가로 스와이프) — 좁은 화면에서만. 데스크탑은 기존 세로 유지. */
+  .tabbar{ display:none; }
+  @media (max-width:720px){
+    html, body{ overflow:hidden; }
+    .wrap{ display:flex; flex-direction:column; height:100dvh; max-width:none; padding:0; }
+    .hero{ padding:14px 16px 8px; }
+    .hero .lead{ display:none; }
+    .hero h1{ font-size:1.5rem; margin:2px 0 8px; }
+    .controls{ margin-top:8px; }
+    .weights{ margin:10px 0 0; max-width:none; }
+    .tabbar{ display:flex; gap:4px; padding:6px 10px; background:var(--paper);
+      border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; flex:0 0 auto; }
+    .tab{ flex:1; padding:9px 6px; border:none; background:none; font:inherit;
+      font-size:.86rem; font-weight:600; color:var(--mute); border-radius:9px; cursor:pointer; }
+    .tab.active{ background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .pager{ flex:1 1 auto; min-height:0; display:flex; overflow-x:auto; overflow-y:hidden;
+      scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .pager::-webkit-scrollbar{ display:none; }
+    .page{ flex:0 0 100%; min-width:0; min-height:0; overflow-y:auto;
+      -webkit-overflow-scrolling:touch; scroll-snap-align:start; padding:16px 16px 36px; }
+    .page.section{ margin:0; }
+    .cards{ grid-template-columns:1fr; }
+  }
 """
 
 
@@ -289,6 +358,247 @@ _TOGGLE_JS = """
       navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ try{r.update();}catch(e){} }); });
     }
     setTimeout(function(){ location.reload(); }, 350);
+  }); }
+})();
+"""
+
+
+# 가중치 슬라이더 재랭킹 + 5축 레이더 차트(클라이언트 전 종목 재계산).
+# ★ composite/selectTop/confidence/companyKey 는 analysis/recommend.py 의
+#   compute_composite / select_from_universe / _confidence / _company_key 를 1:1 미러링한다.
+#   둘 중 하나를 고치면 다른 쪽과 tests/test_rank_parity.py 도 함께 고쳐야 한다.
+_RANK_JS = """
+(function(){
+  var UNIV = window.SCORE_UNIVERSE || [];
+  var PRESETS = window.WEIGHT_PRESETS || {};
+  var PRESETS_LABEL = window.PRESETS_LABEL || {};
+  var AXES = window.AXES || ['value','quality','growth','trend','sentiment'];
+  var LABELS = window.AXIS_LABELS || {};
+  var tbody = document.getElementById('analysis-body');
+  var cards = document.getElementById('cards');
+  var styleLabel = document.getElementById('style-label');
+  var sumEl = document.getElementById('weight-sum');
+  var pills = Array.prototype.slice.call(document.querySelectorAll('.style-pill'));
+  var REQUIRED_SUM = 100;
+  var sliders = Array.prototype.slice.call(document.querySelectorAll('input[data-axis]'));
+  var TOP_N = 10, MAX_SECTOR = 3, MIN_COV = 0.4;
+  var weights = {};
+
+  function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function defaultWeights(){
+    var base = PRESETS[window.UX_DEFAULT_STYLE] || PRESETS.balanced || {};
+    var w={}; AXES.forEach(function(a){ w[a]=Math.round((base[a]||0)*100); }); return w;
+  }
+  function loadWeights(){
+    try{ var s=JSON.parse(localStorage.getItem('sp_weights')||'null');
+      if(s){ var w={}, ok=false; AXES.forEach(function(a){
+        if(typeof s[a]==='number'){ w[a]=s[a]; ok=true; } else w[a]=0; });
+        if(ok) return w; }
+    }catch(e){}
+    return defaultWeights();
+  }
+  function saveWeights(){ try{ localStorage.setItem('sp_weights', JSON.stringify(weights)); }catch(e){} }
+
+  // recommend.compute_composite 미러: 결측 축은 분모에서 제외한 가중 평균.
+  function composite(sc){
+    var num=0, den=0;
+    for(var i=0;i<AXES.length;i++){ var v=sc[i]; if(v==null||v!==v) continue;
+      var w=weights[AXES[i]]||0; num+=v*w; den+=w; }
+    return den>0 ? num/den : NaN;
+  }
+  // recommend._confidence 미러.
+  function confidence(cov, comp){
+    if(cov<0.6) return '낮음(데이터 부족)';
+    if(comp>=75 && cov>=0.8) return '비교적 높음';
+    if(comp>=60) return '보통';
+    return '낮음';
+  }
+  // recommend._company_key 미러: 'Class A/B/C' 표기 제거 후 소문자 키.
+  function companyKey(name, ticker){
+    if(name){ var b=String(name).replace(/[\\s\\-]*\\(?\\bclass\\s+[a-c]\\b\\)?/ig,'')
+      .trim().replace(/[\\s.,]+$/,'').toLowerCase(); if(b) return b; }
+    return String(ticker).toUpperCase();
+  }
+  // recommend.select_from_universe 미러: composite 내림차순 + 섹터 분산 + 이중상장 제거.
+  function selectTop(){
+    var scored=[];
+    for(var i=0;i<UNIV.length;i++){ var it=UNIV[i]; if((it.cov||0)<MIN_COV) continue;
+      var c=composite(it.sc||[]); if(c!==c) continue; scored.push([c,it]); }
+    scored.sort(function(a,b){ if(b[0]!==a[0]) return b[0]-a[0];
+      return a[1].t<b[1].t?-1:(a[1].t>b[1].t?1:0); });
+    var out=[], sec={}, seen={};
+    for(var k=0;k<scored.length;k++){ var item=scored[k][1], comp=scored[k][0];
+      var ck=companyKey(item.n,item.t); if(seen[ck]) continue;
+      var s=item.s||'Unknown'; if((sec[s]||0)>=MAX_SECTOR) continue;
+      out.push({it:item, comp:comp}); seen[ck]=1; sec[s]=(sec[s]||0)+1;
+      if(out.length>=TOP_N) break; }
+    return out;
+  }
+
+  function radar(sc){
+    var cx=92, cy=86, R=60, n=AXES.length, pts=[], grid=[];
+    for(var i=0;i<n;i++){
+      var ang=-Math.PI/2 + i*2*Math.PI/n;
+      var v=sc[i]; v=(v==null||v!==v)?0:Math.max(0,Math.min(100,v));
+      var rr=R*v/100;
+      pts.push((cx+rr*Math.cos(ang)).toFixed(1)+','+(cy+rr*Math.sin(ang)).toFixed(1));
+      grid.push((cx+R*Math.cos(ang)).toFixed(1)+','+(cy+R*Math.sin(ang)).toFixed(1));
+    }
+    var mid=grid.map(function(p){ var xy=p.split(',');
+      return ((+xy[0]-cx)*0.5+cx).toFixed(1)+','+((+xy[1]-cy)*0.5+cy).toFixed(1); });
+    var labels='';
+    for(var j=0;j<n;j++){
+      var a2=-Math.PI/2 + j*2*Math.PI/n;
+      var lx=cx+(R+13)*Math.cos(a2), ly=cy+(R+13)*Math.sin(a2);
+      var anchor=Math.abs(Math.cos(a2))<0.3?'middle':(Math.cos(a2)>0?'start':'end');
+      labels+='<text x="'+lx.toFixed(1)+'" y="'+(ly+3).toFixed(1)+'" text-anchor="'+anchor+'">'
+        +esc(LABELS[AXES[j]]||AXES[j])+'</text>';
+    }
+    return '<svg class="radar" viewBox="0 0 184 172" role="img" aria-label="5축 점수 레이더">'
+      +'<polygon class="radar-grid" points="'+grid.join(' ')+'"/>'
+      +'<polygon class="radar-grid mid" points="'+mid.join(' ')+'"/>'
+      +'<polygon class="radar-area" points="'+pts.join(' ')+'"/>'
+      +labels+'</svg>';
+  }
+
+  function fmtPrice(p){ if(p==null||p!==p) return '—';
+    return '$'+Number(p).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function indLine(it){ return it.i ? esc(it.n)+' · '+esc(it.i) : esc(it.n); }
+
+  function renderRows(list){
+    if(!tbody) return;
+    tbody.innerHTML = list.map(function(r,idx){
+      var it=r.it, comp=r.comp, cov=it.cov||0;
+      var why=(it.why&&it.why[0])||'종합점수가 상대적으로 우수';
+      var risk=(it.risks&&it.risks[0])||'특이 리스크 메모 없음';
+      var ind = it.i ? '<br><span class="ind">'+esc(it.i)+'</span>' : '';
+      return '<tr><td class="num">'+(idx+1)+'</td>'
+        +'<td><span class="tk">'+esc(it.t)+'</span><br><span>'+esc(it.n)+'</span>'+ind+'</td>'
+        +'<td><span class="sc">'+comp.toFixed(0)+'점</span></td>'
+        +'<td>'+esc(confidence(cov,comp))+'</td>'
+        +'<td>'+esc(why)+'</td><td>'+esc(risk)+'</td></tr>';
+    }).join('');
+  }
+  function renderCards(list){
+    if(!cards) return;
+    cards.innerHTML = list.map(function(r){
+      var it=r.it, comp=r.comp, cov=it.cov||0;
+      var why=(it.why||[]).map(function(w){return '<li>'+esc(w)+'</li>';}).join('')||'<li>—</li>';
+      var risks=(it.risks||[]).map(function(w){return '<li>'+esc(w)+'</li>';}).join('')
+        ||'<li>특이 리스크 메모 없음</li>';
+      return '<div class="card"><div class="card-head">'
+        +'<span class="rank-ticker">'+esc(it.t)+'</span>'
+        +'<span class="rank-name">'+indLine(it)+'</span>'
+        +'<span class="composite">'+comp.toFixed(0)+'점</span></div>'
+        +'<div class="card-meta">현재가 '+fmtPrice(it.p)+' · 신뢰도 <b>'+esc(confidence(cov,comp))+'</b></div>'
+        +'<div class="radar-wrap">'+radar(it.sc||[])+'</div>'
+        +'<div class="cols"><div><h4>왜 추천?</h4><ul>'+why+'</ul></div>'
+        +'<div><h4>리스크</h4><ul>'+risks+'</ul></div></div></div>';
+    }).join('');
+  }
+
+  function sumWeights(){ var s=0; for(var i=0;i<AXES.length;i++) s+=(weights[AXES[i]]||0); return s; }
+  function updateSum(){
+    var s=sumWeights();
+    if(sumEl){ sumEl.textContent='합계 '+s+'/'+REQUIRED_SUM; sumEl.classList.toggle('bad', s!==REQUIRED_SUM); }
+    return s;
+  }
+
+  var raf=null;
+  function render(){
+    var s=updateSum();
+    if(s!==REQUIRED_SUM){
+      // 다섯 항목 합이 정확히 100일 때만 분석을 보여 준다.
+      var msg='다섯 항목의 합을 '+REQUIRED_SUM+'으로 맞추면 분석이 표시됩니다 (현재 '+s+')';
+      if(tbody) tbody.innerHTML='<tr><td colspan="6" class="weight-warn">'+msg+'</td></tr>';
+      if(cards) cards.innerHTML='<div class="weight-warn-card">'+msg+'</div>';
+      return;
+    }
+    var list=selectTop(); renderRows(list); renderCards(list);
+  }
+  function scheduleRender(){ if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(render); }
+
+  function matchedPreset(){
+    var names=Object.keys(PRESETS);
+    for(var i=0;i<names.length;i++){ var p=PRESETS[names[i]], ok=true;
+      for(var j=0;j<AXES.length;j++){
+        if(Math.round((p[AXES[j]]||0)*100)!==(weights[AXES[j]]||0)){ ok=false; break; } }
+      if(ok) return names[i]; }
+    return null;
+  }
+  function setLabel(){
+    if(!styleLabel) return; var mp=matchedPreset();
+    styleLabel.textContent='가중치: '+(mp?(PRESETS_LABEL[mp]||mp):'사용자 지정');
+  }
+  function markPills(){ var mp=matchedPreset();
+    pills.forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-style')===mp); }); }
+  function syncUI(){
+    sliders.forEach(function(sl){ var a=sl.getAttribute('data-axis'); sl.value=weights[a]||0;
+      var out=document.querySelector('[data-axis-val="'+a+'"]'); if(out) out.textContent=weights[a]||0; });
+    markPills(); setLabel(); updateSum();
+  }
+
+  sliders.forEach(function(sl){ sl.addEventListener('input', function(){
+    var a=sl.getAttribute('data-axis'); weights[a]=parseInt(sl.value,10)||0;
+    var out=document.querySelector('[data-axis-val="'+a+'"]'); if(out) out.textContent=weights[a];
+    markPills(); setLabel(); updateSum(); saveWeights(); scheduleRender();
+  }); });
+  pills.forEach(function(p){ p.addEventListener('click', function(){
+    var st=p.getAttribute('data-style'), pr=PRESETS[st]; if(!pr) return;
+    AXES.forEach(function(a){ weights[a]=Math.round((pr[a]||0)*100); });
+    saveWeights(); syncUI(); scheduleRender();
+  }); });
+  var resetBtn=document.getElementById('weights-reset');
+  if(resetBtn) resetBtn.addEventListener('click', function(){
+    weights=defaultWeights(); saveWeights(); syncUI(); scheduleRender(); });
+
+  var rb=document.getElementById('refresh-btn');
+  if(rb){ rb.addEventListener('click', function(){
+    rb.disabled=true; rb.textContent='불러오는 중…';
+    if('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations){
+      navigator.serviceWorker.getRegistrations().then(function(rs){
+        rs.forEach(function(r){ try{r.update();}catch(e){} }); });
+    }
+    setTimeout(function(){ location.reload(); }, 350);
+  }); }
+
+  weights = loadWeights();
+  syncUI();
+  if(UNIV.length) render();
+})();
+"""
+
+
+# 모바일 페이저(탭+가로 스와이프 동기화) + 가중치 패널 접기. 데스크탑(탭 숨김)에선 무해.
+_PAGER_JS = """
+(function(){
+  var pager=document.getElementById('pager');
+  var tabs=Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  if(pager && tabs.length){
+    var pages=Array.prototype.slice.call(pager.querySelectorAll('.page'));
+    tabs.forEach(function(t){ t.addEventListener('click', function(){
+      var i=parseInt(t.getAttribute('data-page'),10)||0;
+      if(pages[i]) pages[i].scrollIntoView({behavior:'smooth', inline:'start', block:'nearest'});
+    }); });
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){ if(e.isIntersecting){
+          var idx=pages.indexOf(e.target);
+          tabs.forEach(function(t,k){ t.classList.toggle('active', k===idx); });
+        }});
+      }, {root:pager, threshold:0.5});
+      pages.forEach(function(p){ io.observe(p); });
+    }
+  }
+  var wt=document.getElementById('weights-toggle');
+  var wb=document.getElementById('weight-body');
+  if(wt && wb){ wt.addEventListener('click', function(){
+    var willOpen=wb.hasAttribute('hidden');
+    if(willOpen) wb.removeAttribute('hidden'); else wb.setAttribute('hidden','');
+    wt.setAttribute('aria-expanded', willOpen?'true':'false');
+    wt.classList.toggle('open', willOpen);
   }); }
 })();
 """
@@ -697,6 +1007,7 @@ def build_recommend_report(
     style_recs: dict[str, list[Recommendation]] | None = None,
     default_style: str | None = None,
     holding_universe: list[dict] | None = None,
+    score_universe: list[dict] | None = None,
 ) -> Path:
     """추천 리스트를 단일 HTML(Anthropic풍 + 투자성향 토글)로 저장하고 경로를 반환한다.
 
@@ -725,13 +1036,37 @@ def build_recommend_report(
         for st, srecs in style_recs.items()
     }
     data_js = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
-    toggle_js = f"window.REPORT_DATA = {data_js};\n{_TOGGLE_JS}"
+    # 슬라이더 재랭킹용 전 종목 데이터(서브점수는 가중치 무관). 산업분류는 여기서 부여.
+    universe_items = []
+    for it in (score_universe or []):
+        item = dict(it)
+        item["i"] = _industry(item.get("t", ""), item.get("s", ""))
+        universe_items.append(item)
+    universe_js = json.dumps(universe_items, ensure_ascii=False).replace("</", "<\\/")
+    presets_js = json.dumps(
+        {st: FACTOR_WEIGHT_PRESETS[st] for st in _UX_ORDER if st in FACTOR_WEIGHT_PRESETS},
+        ensure_ascii=False,
+    )
+    presets_label_js = json.dumps(_STYLE_LABELS_UX, ensure_ascii=False)
+    axes_js = json.dumps(_AXES)
+    axis_labels_js = json.dumps({a: FACTOR_LABELS_KO[a] for a in _AXES}, ensure_ascii=False)
+    toggle_js = (
+        f"window.REPORT_DATA = {data_js};\n"
+        f"window.SCORE_UNIVERSE = {universe_js};\n"
+        f"window.WEIGHT_PRESETS = {presets_js};\n"
+        f"window.PRESETS_LABEL = {presets_label_js};\n"
+        f"window.AXES = {axes_js};\n"
+        f"window.AXIS_LABELS = {axis_labels_js};\n"
+        f"window.UX_DEFAULT_STYLE = {json.dumps(default_style)};\n"
+        f"{_RANK_JS}"
+    )
     holdings_universe = _normalize_holding_universe(holding_universe, style_recs)
     holdings_universe_js = json.dumps(
         {item["ticker"]: item for item in holdings_universe},
         ensure_ascii=False,
     ).replace("</", "<\\/")
     holding_js = f"window.HOLDING_UNIVERSE = {holdings_universe_js};\nwindow.HOLDING_API_BASE = window.HOLDING_API_BASE || '/api';\n{_HOLDINGS_JS}"
+    pager_js = _PAGER_JS
     holding_options = _holding_options(holdings_universe)
 
     analysis_rows = payload[default_style]["rows"]
@@ -739,6 +1074,28 @@ def build_recommend_report(
     pills = "".join(
         f'<button class="style-pill{(" active" if st == default_style else "")}" type="button" data-style="{st}">{_STYLE_LABELS_UX.get(st, st)}</button>'
         for st in _UX_ORDER if st in payload
+    )
+    # 가중치 슬라이더 초기값(기본 성향 프리셋 → 0~100). 합 무관(JS가 정규화).
+    _default_w = FACTOR_WEIGHT_PRESETS.get(default_style) or FACTOR_WEIGHT_PRESETS["balanced"]
+    weight_rows = "".join(
+        f'<label class="weight-row"><span class="wk">{FACTOR_LABELS_KO[a]}</span>'
+        f'<input type="range" min="0" max="100" step="1" data-axis="{a}" '
+        f'value="{round(_default_w.get(a, 0) * 100)}" aria-label="{FACTOR_LABELS_KO[a]} 가중치">'
+        f'<span class="wv" data-axis-val="{a}">{round(_default_w.get(a, 0) * 100)}</span></label>'
+        for a in _AXES
+    )
+    weights_panel = (
+        '<div class="weights" id="weights">'
+        '<button class="weights-toggle" id="weights-toggle" type="button" aria-expanded="false">'
+        '<span class="ctl-label">가중치 조절</span>'
+        '<span class="weight-sum" id="weight-sum"></span>'
+        '<span class="style-now" id="style-label"></span>'
+        '<span class="caret" aria-hidden="true">▾</span></button>'
+        '<div class="weight-body" id="weight-body" hidden>'
+        f'<div class="weight-list">{weight_rows}</div>'
+        '<div class="weights-foot">'
+        '<button class="mini-link" id="weights-reset" type="button">기본값으로</button></div>'
+        '</div></div>'
     )
 
     html = f"""<!DOCTYPE html>
@@ -768,9 +1125,18 @@ def build_recommend_report(
       <button class="refresh-btn" id="refresh-btn" type="button">↻ 갱신</button>
       <span class="upd">마지막 갱신 {gen_time}</span>
     </div>
+    {weights_panel}
   </header>
 
-  <section class="section">
+  <nav class="tabbar" role="tablist" aria-label="페이지">
+    <button class="tab active" type="button" data-page="0">추천 분석</button>
+    <button class="tab" type="button" data-page="1">종목 상세</button>
+    <button class="tab" type="button" data-page="2">내 보유</button>
+  </nav>
+
+  <div class="pager" id="pager">
+
+  <section class="section page">
     <p class="eyebrow">ranked analysis</p>
     <h2 class="title">추천 종목 분석</h2>
     <div class="surface">
@@ -781,7 +1147,7 @@ def build_recommend_report(
     </div>
   </section>
 
-  <section class="section">
+  <section class="section page">
     <p class="eyebrow">per-ticker detail</p>
     <h2 class="title">종목별 상세</h2>
     <p class="sub">5축 점수 · 강점과 리스크</p>
@@ -804,7 +1170,7 @@ def build_recommend_report(
     <div class="cards" id="cards">{cards}</div>
   </section>
 
-  <section class="section holdings">
+  <section class="section holdings page">
     <p class="eyebrow">my holdings</p>
     <h2 class="title">내 보유 종목</h2>
     <div class="holding-shell">
@@ -833,6 +1199,7 @@ def build_recommend_report(
       <div class="price-stamp" id="price-stamp">가격 갱신 대기</div>
     </div>
   </section>
+  </div>
 </div>
 <script>
   if ("serviceWorker" in navigator && location.protocol !== "file:") {{
@@ -843,6 +1210,7 @@ def build_recommend_report(
 </script>
 <script>{toggle_js}</script>
 <script>{holding_js}</script>
+<script>{pager_js}</script>
 </body></html>"""
 
     out_path.write_text(html, encoding="utf-8")

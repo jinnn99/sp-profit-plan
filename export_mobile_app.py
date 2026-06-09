@@ -31,10 +31,6 @@ def main() -> None:
 
     OUT_DIR.mkdir(exist_ok=True)
     html = REPORT.read_text(encoding="utf-8")
-    html = html.replace(
-        '<link rel="manifest" href="./manifest.webmanifest">',
-        '<link rel="manifest" href="./manifest.webmanifest">',
-    )
     (OUT_DIR / "index.html").write_text(html, encoding="utf-8")
 
     manifest = json.loads((ROOT / "manifest.webmanifest").read_text(encoding="utf-8"))
@@ -50,34 +46,27 @@ def main() -> None:
         if icon_path.exists():
             shutil.copy2(icon_path, OUT_DIR / icon_file)
 
-    (OUT_DIR / "sw.js").write_text(
-        'const CACHE_NAME = "sp-profit-plan-v1";\n'
-        'const REPORT_URL = "./index.html";\n'
-        'const ASSETS = ["./", REPORT_URL, "./manifest.webmanifest", "./app_icon.svg", "./app_icon-192.png", "./app_icon-512.png"];\n'
-        'self.addEventListener("install", (event) => {\n'
-        '  event.waitUntil(caches.open(CACHE_NAME)\n'
-        '    .then((cache) => cache.addAll(ASSETS))\n'
-        '    .then(() => self.skipWaiting()));\n'
-        '});\n'
-        'self.addEventListener("activate", (event) => {\n'
-        '  event.waitUntil(caches.keys()\n'
-        '    .then((keys) => Promise.all(keys.map((key) => key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())))\n'
-        '    .then(() => self.clients.claim()));\n'
-        '});\n'
-        'self.addEventListener("fetch", (event) => {\n'
-        '  if (event.request.method !== "GET") return;\n'
-        '  const url = new URL(event.request.url);\n'
-        '  if (url.pathname.includes("/api/")) return;\n'
-        '  event.respondWith(fetch(event.request)\n'
-        '    .then((response) => {\n'
-        '      const copy = response.clone();\n'
-        '      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));\n'
-        '      return response;\n'
-        '    })\n'
-        '    .catch(() => caches.match(event.request).then((cached) => cached || caches.match(REPORT_URL))));\n'
-        '});\n',
-        encoding="utf-8",
+    # 서비스워커는 루트 sw.js를 단일 소스로 삼고, 배포본(index.html)에 맞게
+    # REPORT_URL/ASSETS만 치환한다. 캐시 전략(install/activate/fetch, /api/ 우회)은
+    # 루트 sw.js 한 곳에서만 관리한다.
+    sw_src = (ROOT / "sw.js").read_text(encoding="utf-8")
+    sw_src = sw_src.replace(
+        'const REPORT_URL = "./S%26P_%EC%88%98%EC%9D%B5%26%ED%94%8C%EB%9E%9C.html";',
+        'const REPORT_URL = "./index.html";',
     )
+    sw_src = sw_src.replace(
+        'const ASSETS = [\n'
+        '  "./",\n'
+        '  REPORT_URL,\n'
+        '  "./manifest.webmanifest",\n'
+        '  "./app_icon.svg"\n'
+        '];',
+        'const ASSETS = ["./", REPORT_URL, "./manifest.webmanifest", '
+        '"./app_icon.svg", "./app_icon-192.png", "./app_icon-512.png"];',
+    )
+    if 'REPORT_URL = "./index.html"' not in sw_src:
+        raise RuntimeError("sw.js REPORT_URL 치환 실패 — 루트 sw.js 형식을 확인하세요.")
+    (OUT_DIR / "sw.js").write_text(sw_src, encoding="utf-8")
 
     (OUT_DIR / "_headers").write_text(
         "/sw.js\n"

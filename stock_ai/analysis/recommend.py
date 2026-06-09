@@ -185,3 +185,112 @@ def cash_buffer(recs: list[Recommendation]) -> float:
     """추천 비중 합 외 현금 권유 비율."""
     invested = sum(r.suggested_weight for r in recs)
     return max(0.0, 1.0 - invested)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# 클라이언트 가중치 슬라이더용 — "서버 순위 == 브라우저 순위" 보장 코어.
+#
+# 5축 서브점수(score_*)는 가중치와 무관한 횡단면 백분위라 한 번만 계산되고 고정이다.
+# 종합점수·종목 선정·신뢰도만 가중치에 의존하므로, 아래 세 순수 함수만 브라우저 JS로
+# 그대로 포팅하면(_RANK_JS) 어떤 가중치에서도 서버 결과와 수학적으로 동일하다.
+# 이 명세는 tests/test_rank_parity.py 가 score.py/build_recommendations 와 대조해 고정한다.
+# ──────────────────────────────────────────────────────────────────────────
+
+def compute_composite(sub_scores: list, weights: list) -> float:
+    """축 점수(0~100, 결측은 None)와 가중치 → 종합점수.
+
+    score.compute_scores 와 동일한 규칙: 결측 축은 분모(가중치 합)에서 제외한 가중 평균.
+    JS computeComposite 가 1:1로 미러링한다.
+    """
+    num = 0.0
+    den = 0.0
+    for v, w in zip(sub_scores, weights):
+        if v is None or v != v:  # None 또는 NaN
+            continue
+        num += float(v) * float(w)
+        den += float(w)
+    return num / den if den > 0 else float("nan")
+
+
+def confidence_label(coverage: float, composite: float) -> str:
+    """_confidence 의 공개 래퍼(JS confidence 가 미러링)."""
+    return _confidence(coverage, composite)
+
+
+def select_from_universe(
+    universe: list[dict],
+    weights: list[float],
+    top_n: int = 10,
+    max_per_sector: int = 3,
+    min_coverage: float = 0.4,
+) -> list[str]:
+    """임베드용 universe(압축 dict 리스트)에서 가중치로 재선정한 티커 순서.
+
+    build_recommendations 의 그리디 선택(섹터 분산 + 이중상장 제거)을 그대로 재현한다.
+    JS select() 가 1:1로 미러링한다. 반환은 선택된 티커 리스트(순위 순).
+    """
+    scored = []
+    for item in universe:
+        cov = item.get("cov", 0.0) or 0.0
+        if cov < min_coverage:
+            continue
+        comp = compute_composite(item.get("sc", []), weights)
+        if comp != comp:  # NaN
+            continue
+        scored.append((comp, item))
+    # composite 내림차순. 극히 드문 동점은 티커로 안정 정렬(JS와 동일 규칙).
+    scored.sort(key=lambda cv: (-cv[0], cv[1].get("t", "")))
+
+    selected: list[str] = []
+    sector_count: dict[str, int] = {}
+    seen_companies: set[str] = set()
+    for _, item in scored:
+        ticker = str(item.get("t", "")).upper()
+        ckey = _company_key(item.get("n", ""), ticker)
+        if ckey in seen_companies:
+            continue
+        sector = item.get("s") or "Unknown"
+        if sector_count.get(sector, 0) >= max_per_sector:
+            continue
+        selected.append(ticker)
+        seen_companies.add(ckey)
+        sector_count[sector] = sector_count.get(sector, 0) + 1
+        if len(selected) >= top_n:
+            break
+    return selected
+
+
+def build_score_universe(score_df: pd.DataFrame, min_coverage: float = 0.4) -> list[dict]:
+    """종합점수표 → 브라우저 슬라이더용 압축 종목 데이터.
+
+    키는 임베드 용량을 줄이려 짧게 쓴다:
+        t=ticker, n=name, s=sector, p=price, cov=coverage,
+        sc=[value,quality,growth,trend,sentiment](0~100 또는 None),
+        why=강점 문장, risks=리스크 문장.
+    why/risks 는 가중치와 무관하므로 여기서 한 번만 만들어 심는다(JS 재계산 불필요).
+    """
+    if score_df is None or score_df.empty:
+        return []
+    out: list[dict] = []
+    for ticker, row in score_df.iterrows():
+        cov = row.get("coverage")
+        cov = float(cov) if pd.notna(cov) else 0.0
+        if cov < min_coverage:
+            continue
+        sc = []
+        for a in _AXES:
+            v = row.get(f"score_{a}")
+            sc.append(round(float(v), 1) if pd.notna(v) else None)
+        price = row.get("price")
+        why, risks = _why_and_risks(row)
+        out.append({
+            "t": str(ticker).upper(),
+            "n": str(row.get("name", "") or ""),
+            "s": str(row.get("sector", "") or ""),
+            "p": float(price) if pd.notna(price) else None,
+            "cov": round(cov, 3),
+            "sc": sc,
+            "why": why,
+            "risks": risks,
+        })
+    return out

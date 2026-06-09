@@ -15,6 +15,7 @@ reports/
 mobile_app/
 S&P_수익&플랜.html
 S&P_수익&플랜_mobile_app.zip
+_rank_preview.html
 wrangler.toml
 cloudflare-connection.json
 *.sqlite
