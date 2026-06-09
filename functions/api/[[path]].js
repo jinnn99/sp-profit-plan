@@ -227,7 +227,8 @@ async function getQuotes(env, url) {
 
   return {
     quotes,
-    asOf: new Date(now).toISOString().replace("T", " ").slice(0, 16),
+    asOf: new Date(now).toISOString().replace("T", " ").slice(0, 16),  // UTC (back-compat)
+    asOfEpoch: now,  // 클라이언트가 기기 로컬 시간대로 표시
     ttlSeconds: ttlMs / 1000,
   };
 }

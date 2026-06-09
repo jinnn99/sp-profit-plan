@@ -882,7 +882,13 @@ _HOLDINGS_JS = """
     if(!symbols.length) return Promise.resolve();
     return api('/quotes?symbols=' + encodeURIComponent(symbols.join(',')), {method:'GET'}).then(function(data){
       quotes = Object.assign({}, quotes, data.quotes || {});
-      if(priceStamp && data.asOf) priceStamp.textContent = '가격 갱신 ' + data.asOf;
+      if(priceStamp && (data.asOfEpoch || data.asOf)){
+        var stamp = data.asOf;  // UTC 폴백
+        if(data.asOfEpoch){
+          try{ stamp = new Date(data.asOfEpoch).toLocaleString('sv-SE').slice(0,16); }catch(e){}
+        }
+        priceStamp.textContent = '가격 갱신 ' + stamp;
+      }
       render();
     }).catch(function(){
       if(priceStamp) priceStamp.textContent = '가격 갱신 대기';
