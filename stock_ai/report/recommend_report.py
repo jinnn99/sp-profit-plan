@@ -1116,13 +1116,13 @@ def build_recommend_report(
         _us_dst = 3 < dt.date.today().month < 11  # 폴백: 4~10월을 DST로 추정
     market_kst = "22:30~05:00" if _us_dst else "23:30~06:00"
     refresh_title = (
-        f"순위 갱신 · 매일 09·13·17·21시(KST)&#10;시장 오픈 · 매일 {market_kst}(KST)"
+        f"순위 갱신 · 미국 장 마감 후 매일 07·09시(KST)&#10;시장 오픈 · 매일 {market_kst}(KST)"
     )
     refresh_aria = (
-        f"순위 갱신 매일 09시 13시 17시 21시 KST, 미국 증시 오픈 매일 {market_kst} KST"
+        f"순위 갱신 미국 장 마감 후 매일 07시 09시 KST, 미국 증시 오픈 매일 {market_kst} KST"
     )
     info_html = (
-        f"<b>순위 갱신</b> · 매일 09·13·17·21시(KST)<br>"
+        f"<b>순위 갱신</b> · 미국 장 마감 후 매일 07·09시(KST)<br>"
         f"<b>시장 오픈</b> · 매일 {market_kst}(KST)"
     )
     if out_path is None:

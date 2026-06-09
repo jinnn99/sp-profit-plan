@@ -16,8 +16,10 @@ on:
       - "sw.js"
       - "requirements.txt"
   schedule:
-    # KST 09:00, 13:00, 17:00, 21:00. Keep this modest to stay within free minutes.
-    - cron: "0 0,4,8,12 * * *"
+    # KST 07:00 & 09:00 (= UTC 22:00 & 00:00) — just after the US market close
+    # (EDT 05:00 / EST 06:00 KST) so the build captures the latest daily close.
+    # Two runs give resilience (retry) without redundant intraday rebuilds.
+    - cron: "0 0,22 * * *"
 
 jobs:
   build:
