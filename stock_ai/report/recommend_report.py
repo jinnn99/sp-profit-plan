@@ -332,16 +332,21 @@ _STYLE = """
     .upd{ display:none; }
     .weights{ margin:8px 0 0; max-width:none; }
     .weight-body{ max-height:40vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-    .tabbar{ display:flex; gap:4px; padding:6px 10px; background:var(--paper);
-      border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; flex:0 0 auto; }
-    .tab{ flex:1; padding:9px 6px; border:none; background:none; font:inherit;
-      font-size:.86rem; font-weight:600; color:var(--mute); border-radius:9px; cursor:pointer; }
-    .tab.active{ background:var(--card); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.08); }
+    .tabbar{ display:flex; gap:3px; padding:5px; position:fixed; left:50%;
+      bottom:calc(env(safe-area-inset-bottom, 0px) + 12px); transform:translateX(-50%);
+      background:rgba(252,251,248,.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+      border:1px solid var(--line); border-radius:999px; box-shadow:0 6px 22px rgba(0,0,0,.14); z-index:20; }
+    .tab{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 18px;
+      border:none; background:none; font:inherit; color:var(--mute); border-radius:999px;
+      cursor:pointer; transition:background .15s, color .15s; }
+    .tab svg{ width:21px; height:21px; display:block; }
+    .tab .tab-label{ font-size:10px; font-weight:600; letter-spacing:.01em; white-space:nowrap; }
+    .tab.active{ background:var(--clay); color:#fff; }
     .pager{ flex:1 1 auto; min-height:0; display:flex; overflow-x:auto; overflow-y:hidden;
       scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
     .pager::-webkit-scrollbar{ display:none; }
     .page{ flex:0 0 100%; min-width:0; min-height:0; overflow-y:auto;
-      -webkit-overflow-scrolling:touch; scroll-snap-align:start; padding:16px 16px 36px; }
+      -webkit-overflow-scrolling:touch; scroll-snap-align:start; padding:16px 16px 96px; }
     .page.section{ margin:0; }
     .cards{ grid-template-columns:1fr; }
   }
@@ -1162,9 +1167,18 @@ def build_recommend_report(
   </header>
 
   <nav class="tabbar" role="tablist" aria-label="페이지">
-    <button class="tab active" type="button" data-page="0">추천 분석</button>
-    <button class="tab" type="button" data-page="1">종목 상세</button>
-    <button class="tab" type="button" data-page="2">내 보유</button>
+    <button class="tab active" type="button" data-page="0" aria-label="추천 분석">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-8"/></svg>
+      <span class="tab-label">추천 분석</span>
+    </button>
+    <button class="tab" type="button" data-page="1" aria-label="종목 상세">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg>
+      <span class="tab-label">종목 상세</span>
+    </button>
+    <button class="tab" type="button" data-page="2" aria-label="내 보유">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/><circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>
+      <span class="tab-label">내 보유</span>
+    </button>
   </nav>
 
   <div class="pager" id="pager">
